@@ -1,8 +1,9 @@
 package com.bernardoavila.slotly.resource;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
@@ -11,23 +12,40 @@ import java.util.List;
 @RequestMapping("/api/resources")
 public class ResourceController {
 
-    @GetMapping
-    public List<ResourceResponse> listAll(){
-        return List.of(
-                new ResourceResponse(
-                        1L,
-                        "Sala Azul",
-                        "Sala de reuniões com projetor, 8 lugares",
-                        Instant.parse("2026-01-15T09:00:00Z")
-                ),
-                new ResourceResponse(
-                        2L,
-                        "Projetor Epson",
-                        "Projetor portátil HDMI",
-                        Instant.parse("2026-02-03T14:30:00Z")
-                )
-        );
+    private final ResourceService service;
 
+    public ResourceController(ResourceService service) {
+        this.service = service;
     }
+
+    @GetMapping
+    public List<ResourceResponse> listAll() {
+        return service.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public ResourceResponse findById(@PathVariable Long id) {
+        return service.findById(id);
+    }
+
+    @PostMapping
+    public ResponseEntity<ResourceResponse> create(@Valid @RequestBody ResourceRequest request) {
+        ResourceResponse created = service.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/{id}")
+    public ResourceResponse update(@PathVariable Long id,
+                                   @Valid @RequestBody ResourceRequest request) {
+        return service.update(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+
 
 }
