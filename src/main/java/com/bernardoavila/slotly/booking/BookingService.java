@@ -36,11 +36,18 @@ public class BookingService {
 
     @Transactional
     public BookingResponse create(BookingRequest request) {
+
+
+
         Resource resource = resourceRepository.findById(request.resourceId())
                 .orElseThrow(() -> new ResourceNotFoundException(request.resourceId()));
 
         User user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new UserNotFoundException(request.userId()));
+
+        if (bookingRepository.existsOverlapping(resource.getId(), request.startsAt(), request.endsAt())) {
+            throw new OverlappingBookingException(resource.getId(), request.startsAt(), request.endsAt());
+        }
 
         Booking booking = new Booking(resource, user, request.startsAt(), request.endsAt());
         return toResponse(bookingRepository.save(booking));
