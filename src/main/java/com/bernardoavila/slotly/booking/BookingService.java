@@ -37,9 +37,7 @@ public class BookingService {
     @Transactional
     public BookingResponse create(BookingRequest request) {
 
-
-
-        Resource resource = resourceRepository.findById(request.resourceId())
+        Resource resource = resourceRepository.findByIdForUpdate(request.resourceId())
                 .orElseThrow(() -> new ResourceNotFoundException(request.resourceId()));
 
         User user = userRepository.findById(request.userId())
