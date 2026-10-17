@@ -27,7 +27,7 @@ public class BookingService {
         this.userRepository = userRepository;
     }
 
-    public List<BookingResponse> findAll() {
+    public List<com.bernardoavila.slotly.booking.BookingResponse> findAll() {
         return bookingRepository.findAll()
                 .stream()
                 .map(BookingService::toResponse)
@@ -35,7 +35,7 @@ public class BookingService {
     }
 
     @Transactional
-    public BookingResponse create(BookingRequest request) {
+    public com.bernardoavila.slotly.booking.BookingResponse create(BookingRequest request) {
 
         Resource resource = resourceRepository.findByIdForUpdate(request.resourceId())
                 .orElseThrow(() -> new ResourceNotFoundException(request.resourceId()));
@@ -51,7 +51,7 @@ public class BookingService {
         return toResponse(bookingRepository.save(booking));
     }
 
-    private static BookingResponse toResponse(Booking booking) {
+    private static com.bernardoavila.slotly.booking.BookingResponse toResponse(Booking booking) {
         return new BookingResponse(
                 booking.getId(),
                 booking.getResource().getId(),
