@@ -3,6 +3,7 @@ package com.bernardoavila.slotly.shared;
 import com.bernardoavila.slotly.booking.OverlappingBookingException;
 import com.bernardoavila.slotly.resource.ResourceNotFoundException;
 import com.bernardoavila.slotly.user.UserNotFoundException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -47,5 +48,27 @@ public class GlobalExceptionHandler {
         problem.setTitle("Invalid Request");
         problem.setProperty("errors", errors);
         return problem;
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        if (isOverlapViolation(ex)) {
+            ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "This resource is already booked for the requested period");
+            problem.setTitle("Booking Conflict");
+            return problem;
+        }
+        throw ex;
+    }
+
+    private static boolean isOverlapViolation(Throwable ex) {
+        for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
+            if (cause.getMessage() != null
+                    && cause.getMessage().contains("no_overlapping_bookings")) {
+                return true;
+            }
+        }
+        return false;
     }
 }
