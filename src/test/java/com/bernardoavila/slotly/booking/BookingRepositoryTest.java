@@ -32,7 +32,7 @@ class BookingRepositoryTest extends PostgresTestBase {
     @BeforeEach
     void setUp() {
         room = resourceRepository.save(new Resource("Sala Azul", "Com projetor"));
-        User user = userRepository.save(new User("teste@example.com", "Teste"));
+        User user = userRepository.save(new User("teste@example.com", "Teste", "not-a-real-hash"));
         bookingRepository.save(new Booking(room, user, NINE, TEN));
     }
 

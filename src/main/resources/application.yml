@@ -25,3 +25,7 @@ logging:
   level:
     org.hibernate.SQL: debug
 
+slotly:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-key-at-least-32-bytes-long-change-me}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}

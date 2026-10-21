@@ -37,7 +37,7 @@ class BookingConcurrencyTest extends PostgresTestBase {
     void setUp() {
         bookingRepository.deleteAll();
         Resource room = resourceRepository.save(new Resource("Sala Concorrida", null));
-        User user = userRepository.save(new User("concurrent@example.com", "Teste"));
+        User user = userRepository.save(new User("concurrent@example.com", "Teste", "not-a-real-hash"));
         resourceId = room.getId();
         userId = user.getId();
     }
