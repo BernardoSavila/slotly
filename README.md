@@ -174,3 +174,18 @@ Matching on the constraint name is not elegant — renaming the constraint
 without updating the handler would silently fall back to `500`. Checking the
 PostgreSQL SQLSTATE (`23P01`) would be more robust but less readable with a
 single constraint in play. Both options trade something.
+
+## Work in progress
+
+Step 8 of 10: JWT authentication.
+
+Done: Spring Security and JJWT dependencies, `V5__add_user_password.sql`
+adding a `password_hash` column, `User` entity updated, `SecurityConfig`
+(stateless, CSRF off, `/api/auth/**` public), `JwtService` for signing and
+verifying tokens, and the auth request/response records.
+
+Remaining: `AuthService` (register and login), `AuthController`, the filter
+that reads the token on each request, and updating the fifteen existing
+tests, which currently fail with 401 now that Security is on the classpath.
+
+Note: the CI badge above may be red while this
