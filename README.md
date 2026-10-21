@@ -1,5 +1,7 @@
 # Slotly
 
+[![CI](https://github.com/BernardoSavila/slotly/actions/workflows/ci.yml/badge.svg)](https://github.com/BernardoSavila/slotly/actions/workflows/ci.yml)
+
 A resource booking REST API built with Java 25 and Spring Boot 4.
 Users reserve shared resources (meeting rooms, equipment) for a time window,
 and the system guarantees that no two bookings for the same resource overlap.
@@ -133,10 +135,42 @@ Tests run against a real PostgreSQL instance via Testcontainers rather than
 an in-memory database, since locking semantics differ between engines and a
 test against H2 would not establish anything about production behaviour.
 
-### Known gap
+### Two layers
 
-The exclusion constraint is not yet in place. The application-level lock
-protects against concurrent requests to this application; it does not
-protect against a second instance, a migration script, or direct database
-access. The intended end state is both layers: the lock for a clean `409`
-response, the constraint as the guarantee that cannot be bypassed.
+Both protections are in place, and they do different jobs.
+
+The pessimistic lock serializes concurrent requests to this application and
+produces a clean `409 Conflict` with a message naming the resource and the
+period. It is what the API relies on in normal operation.
+
+The exclusion constraint (`V4__prevent_overlapping_booking.sql`) makes
+overlapping rows impossible for any writer — a second application instance,
+a migration script, a direct `psql` session, or a future bug in this code:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+ALTER TABLE bookings
+    ADD CONSTRAINT no_overlapping_bookings
+    EXCLUDE USING gist (
+        resource_id WITH =,
+        tstzrange(starts_at, ends_at) WITH &&
+    );
+```
+
+`tstzrange` is half-open by default — it includes the start and excludes the
+end — which matches the strict `<` used in the application-level check. The
+two layers agree on the boundary semantics without having to be kept in sync
+by hand.
+
+Adding the constraint opens a path the application did not previously have:
+if it fires, the result is a `DataIntegrityViolationException`, not the
+domain exception. `GlobalExceptionHandler` inspects the exception chain for
+the constraint name and maps that specific case to `409`; every other
+integrity violation is rethrown and surfaces as a `500`, because a foreign
+key or unique violation there would be a bug, not a booking conflict.
+
+Matching on the constraint name is not elegant — renaming the constraint
+without updating the handler would silently fall back to `500`. Checking the
+PostgreSQL SQLSTATE (`23P01`) would be more robust but less readable with a
+single constraint in play. Both options trade something.
