@@ -2,6 +2,8 @@ package com.bernardoavila.slotly.shared;
 
 import com.bernardoavila.slotly.booking.OverlappingBookingException;
 import com.bernardoavila.slotly.resource.ResourceNotFoundException;
+import com.bernardoavila.slotly.security.EmailAlreadyRegisteredException;
+import com.bernardoavila.slotly.security.InvalidCredentialsException;
 import com.bernardoavila.slotly.user.UserNotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -70,5 +72,21 @@ public class GlobalExceptionHandler {
             }
         }
         return false;
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ProblemDetail handleInvalidCredentials(InvalidCredentialsException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNAUTHORIZED, ex.getMessage());
+        problem.setTitle("Authentication Failed");
+        return problem;
+    }
+
+    @ExceptionHandler(EmailAlreadyRegisteredException.class)
+    public ProblemDetail handleEmailAlreadyRegistered(EmailAlreadyRegisteredException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT, ex.getMessage());
+        problem.setTitle("Email Already Registered");
+        return problem;
     }
 }
