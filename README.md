@@ -8,6 +8,15 @@ the system guarantees that no two bookings for the same resource overlap.
 
 **Live:** https://slotly-i774.onrender.com
 
+Opening that URL returns a JSON index describing the API. Everything else
+requires a bearer token — start by registering:
+
+```bash
+curl -X POST https://slotly-i774.onrender.com/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","name":"You","password":"atleast8chars"}'
+```
+
 Running on Render's free tier, which spins the service down after 15 minutes
 of inactivity — the first request after a pause takes up to a minute while it
 wakes. The database is a free Neon PostgreSQL instance, which suspends on
