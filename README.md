@@ -2,9 +2,42 @@
 
 [![CI](https://github.com/BernardoSavila/slotly/actions/workflows/ci.yml/badge.svg)](https://github.com/BernardoSavila/slotly/actions/workflows/ci.yml)
 
-A resource booking REST API built with Java 25 and Spring Boot 4.
-Users reserve shared resources (meeting rooms, equipment) for a time window,
-and the system guarantees that no two bookings for the same resource overlap.
+A resource booking REST API built with Java 25 and Spring Boot 4. Users
+reserve shared resources (meeting rooms, equipment) for a time window, and
+the system guarantees that no two bookings for the same resource overlap.
+
+**Live:** https://slotly-i774.onrender.com
+
+Running on Render's free tier, which spins the service down after 15 minutes
+of inactivity — the first request after a pause takes up to a minute while it
+wakes. The database is a free Neon PostgreSQL instance, which suspends on
+idle and resumes in a few seconds.
+
+## Stack
+
+Java 25 · Spring Boot 4.1 · Spring Data JPA · Spring Security · PostgreSQL 17
+· Flyway · Testcontainers · JUnit 6 · Docker · GitHub Actions
+
+## Running locally
+
+Requires Java 25 and Docker.
+
+```bash
+git clone https://github.com/BernardoSavila/slotly.git
+cd slotly
+docker compose up -d
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+The `dev` profile seeds a demo user. Without it, only the schema migrations
+run — which is what happens in production.
+
+```bash
+./mvnw test
+```
+
+Tests start their own PostgreSQL container via Testcontainers, so no setup
+beyond a running Docker daemon is needed.
 
 ## Preventing overlapping bookings
 
@@ -249,3 +282,97 @@ services and repositories directly and never pass through the filter chain.
 That split is the layered architecture paying off in a measurable way. Had
 the overlap logic lived in the controller, authentication would have had to
 be dealt with in order to test a three-variable condition.
+
+## API
+
+All endpoints except the two under `/api/auth` require a bearer token:
+
+```
+Authorization: Bearer <token>
+```
+
+### Authentication
+
+```http
+POST /api/auth/register
+{"email": "...", "name": "...", "password": "..."}
+→ 201 {"token": "..."}
+→ 409 if the email is already registered
+
+POST /api/auth/login
+{"email": "...", "password": "..."}
+→ 200 {"token": "..."}
+→ 401 on bad credentials
+```
+
+### Resources
+
+```http
+GET    /api/resources           → 200 [ ... ]
+GET    /api/resources/{id}      → 200 { ... } | 404
+POST   /api/resources           → 201 { ... } | 400
+PUT    /api/resources/{id}      → 200 { ... } | 400 | 404
+DELETE /api/resources/{id}      → 204 | 404
+```
+
+```json
+{"name": "Blue Room", "description": "Projector, seats 8"}
+```
+
+### Bookings
+
+```http
+GET  /api/bookings    → 200 [ ... ]
+POST /api/bookings    → 201 { ... } | 400 | 404 | 409
+```
+
+```json
+{
+  "resourceId": 1,
+  "userId": 1,
+  "startsAt": "2026-11-20T09:00:00Z",
+  "endsAt": "2026-11-20T10:00:00Z"
+}
+```
+
+Timestamps are ISO-8601 in UTC. Intervals are half-open: a booking ending at
+10:00 and one starting at 10:00 do not conflict.
+
+### Errors
+
+Error responses follow RFC 7807:
+
+```json
+{
+  "status": 409,
+  "title": "Booking Conflict",
+  "detail": "Resource 1 is already booked between 2026-11-20T09:00:00Z and 2026-11-20T10:00:00Z",
+  "instance": "/api/bookings"
+}
+```
+
+Validation failures add a per-field `errors` object:
+
+```json
+{
+  "status": 400,
+  "title": "Invalid Request",
+  "detail": "Validation failed",
+  "errors": {"name": "name is required"}
+}
+```
+
+## Known limitations
+
+- **No pagination.** `GET /api/resources` returns a bare array, which means
+  adding pagination later would change the response shape and break clients.
+  An envelope from the start would have avoided that; Spring Data's `Page`
+  would be the fix.
+- **`userId` comes from the request body** rather than from the authenticated
+  token, so a client can create bookings on another user's behalf. The token
+  carries the user id and should be the source of truth.
+- **No authorization.** Any authenticated user can delete any resource. There
+  are no roles.
+- **Demo data is seeded only under the `dev` profile**, via a migration in a
+  reserved version range (`V900`). Running without that profile against a
+  database that already applied it would fail Flyway validation.
